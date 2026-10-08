@@ -2,6 +2,7 @@ import io
 import os
 import zipfile
 import pandas as pd
+import json
 from PIL import Image as PILImage
 import openpyxl
 from openpyxl.drawing.image import Image as XLImage
@@ -11,7 +12,46 @@ import streamlit as st
 # Default template filename expected in the repository
 DEFAULT_TEMPLATE_PATH = "L-RG-84927-150.xlsx"
 
+# --- Persistent Mapping Storage ---
+MAPPINGS_FILE = "mappings.json"
 
+DEFAULT_MAPPINGS = {
+    "shapes": [
+        {
+            "Input Shape (Col D)": "RD(F/C)",
+            "Template Value (Col C)": "ROUND BRILLIANT",
+        },
+        {"Input Shape (Col D)": "OV", "Template Value (Col C)": "OVAL"},
+    ],
+    "settings": [
+        {
+            "Input Setting (Col J)": "PRONG",
+            "Template Value (Col X)": "Hand Set Prong/Pave/Bead",
+        },
+        {
+            "Input Setting (Col J)": "MICRO SPLIT PRONG",
+            "Template Value (Col X)": "Hand Set Micro Split Prong",
+        },
+    ],
+}
+
+
+def load_persistent_mappings():
+    if os.path.exists(MAPPINGS_FILE):
+        try:
+            with open(MAPPINGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return DEFAULT_MAPPINGS
+    return DEFAULT_MAPPINGS
+
+
+def save_persistent_mappings(shapes_data, settings_data):
+    with open(MAPPINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            {"shapes": shapes_data, "settings": settings_data}, f, indent=4
+        )
+        
 def fit_image_dimensions(image_bytes, max_width=420, max_height=420):
     """Calculates fitted dimensions preserving original aspect ratio."""
     with PILImage.open(io.BytesIO(image_bytes)) as img:
@@ -208,6 +248,7 @@ template_exists = os.path.exists(DEFAULT_TEMPLATE_PATH)
 
 # --- Configuration Section ---
 with st.expander("⚙️ View / Modify Mappings & Column Settings", expanded=False):
+    current_mappings = load_persistent_mappings()
     tab1, tab2, tab3,tab4 = st.tabs(
         [
             "Shape Mappings",
@@ -221,37 +262,22 @@ with st.expander("⚙️ View / Modify Mappings & Column Settings", expanded=Fal
         st.caption(
             "Add, remove, or modify input shape names to their corresponding template dropdown values:"
         )
-        default_shapes = pd.DataFrame(
-            [
-                {
-                    "Input Shape (Col D)": "RD(F/C)",
-                    "Template Value (Col C)": "ROUND BRILLIANT",
-                },
-                {"Input Shape (Col D)": "OV", "Template Value (Col C)": "OVAL"},
-            ]
+        shapes_data = current_mappings.get(
+            "shapes", DEFAULT_MAPPINGS["shapes"]
         )
         edited_shapes_df = st.data_editor(
-            default_shapes, num_rows="dynamic", width="stretch"
+            pd.DataFrame(shapes_data), num_rows="dynamic", width="stretch"
         )
 
     with tab2:
         st.caption(
             "Add, remove, or modify input setting descriptions to their corresponding template dropdown values:"
         )
-        default_settings = pd.DataFrame(
-            [
-                {
-                    "Input Setting (Col J)": "PRONG",
-                    "Template Value (Col X)": "Hand Set Prong/Pave/Bead",
-                },
-                {
-                    "Input Setting (Col J)": "MICRO SPLIT PRONG",
-                    "Template Value (Col X)": "Hand Set Micro Split Prong",
-                },
-            ]
+        settings_data = current_mappings.get(
+            "settings", DEFAULT_MAPPINGS["settings"]
         )
         edited_settings_df = st.data_editor(
-            default_settings, num_rows="dynamic", width="stretch"
+            pd.DataFrame(settings_data), num_rows="dynamic", width="stretch"
         )
 
     with tab3:
@@ -281,7 +307,16 @@ with st.expander("⚙️ View / Modify Mappings & Column Settings", expanded=Fal
         with ic3:
             in_col_mm = st.text_input("MM Column", value="F")
             in_col_setting = st.text_input("Setting Description Column", value="J")
-
+        st.divider()
+    if st.button("💾 Save Mappings Permanently"):
+        shapes_to_save = edited_shapes_df.dropna(how="all").to_dict(
+            orient="records"
+        )
+        settings_to_save = edited_settings_df.dropna(how="all").to_dict(
+            orient="records"
+        )
+        save_persistent_mappings(shapes_to_save, settings_to_save)
+        st.success("Saved successfully! Mappings are now permanently updated.")
 # Convert edited DataFrames to lookup dictionaries
 shape_mapping = dict(
     zip(

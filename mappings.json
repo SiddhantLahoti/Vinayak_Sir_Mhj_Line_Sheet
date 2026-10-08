@@ -1,0 +1,26 @@
+{
+    "shapes": [
+        {
+            "Input Shape (Col D)": "RD(F/C)",
+            "Template Value (Col C)": "ROUND BRILLIANT"
+        },
+        {
+            "Input Shape (Col D)": "OV",
+            "Template Value (Col C)": "OVAL"
+        },
+        {
+            "Input Shape (Col D)": "",
+            "Template Value (Col C)": ""
+        }
+    ],
+    "settings": [
+        {
+            "Input Setting (Col J)": "PRONG",
+            "Template Value (Col X)": "Hand Set Prong/Pave/Bead"
+        },
+        {
+            "Input Setting (Col J)": "MICRO SPLIT PRONG",
+            "Template Value (Col X)": "Hand Set Micro Split Prong"
+        }
+    ]
+}
